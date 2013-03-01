@@ -34,6 +34,9 @@
                     (:constructor make-node (val left right)))
   val left right)
 
+(cl:declaim (cl:inline make-foldl make-foldr
+                       srfi-101::foldl/1 srfi-101::foldr/1
+                       car cdr null?))
 
 ;; Nat -> Nat
 (define (sub1 n) (- n 1))
@@ -334,22 +337,25 @@
         0)))
 
 (define (make-foldl empty? first rest)
+  (cl:declare (cl:optimize (cl:debug 1))
+              (cl:function empty? first rest))
   (cl:labels ((f (cons empty ls)
                 (if (funcall empty? ls) 
                     empty
                     (f cons
                       (funcall cons (funcall first ls) empty) 
                       (funcall rest ls)))))
-    (cl:declare (cl:optimize (cl:debug 1)))
     #'f))
 
 (define (make-foldr empty? first rest)
-  (letrec ((f (lambda (cons empty ls)
+  (cl:declare (cl:optimize (cl:debug 1))
+              (cl:function empty? first rest))
+  (cl:labels ((f (cons empty ls)
                 (if (funcall empty? ls) 
                     empty
                     (funcall cons (funcall first ls)
-                             (f cons empty (funcall rest ls)))))))
-    f))
+                             (f cons empty (funcall rest ls))))))
+    #'f))
 
 ;; [X Y -> Y] Y [RaListof X] -> Y
 (define srfi-101::foldl/1
@@ -369,7 +375,18 @@
 
 ;; [RaListof X] -> [RaListof X]
 (define (srfi-101:reverse ls)
-  (srfi-101::foldl/1 #'srfi-101:cons srfi-101::null ls))
+  (cl:declare (cl:optimize (cl:debug 1)))  
+  (srfi-101::foldl/1 #'srfi-101:cons srfi-101::null ls)
+  #|(let ((empty? #'srfi-101:null?)
+        (first #'srfi-101:car)
+        (rest #'srfi-101:cdr))
+    (cl:labels ((f (cons empty ls)
+                  (if (funcall empty? ls) 
+                      empty
+                      (f cons
+                        (funcall cons (funcall first ls) empty) 
+                        (funcall rest ls)))))
+      (f #'srfi-101:cons srfi-101::null ls)))|#)
 
 ;; [RaListof X] Nat -> [RaListof X]
 (define (srfi-101:list-tail ls i)
