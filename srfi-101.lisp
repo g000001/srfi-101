@@ -25,14 +25,15 @@
 
 ;; Ported to Common Lisp by Masaomi Chiba
 
-(cl:defstruct (kons (:predicate kons?)
-                    (:constructor make-kons (size tree rest)))
-  size tree rest)
+(cl:eval-when (:compile-toplevel :load-toplevel :execute)
+  (cl:defstruct (kons (:predicate kons?)
+                      (:constructor make-kons (size tree rest)))
+    size tree rest))
 
-
-(cl:defstruct (node (:predicate node?)
-                    (:constructor make-node (val left right)))
-  val left right)
+(cl:eval-when (:compile-toplevel :load-toplevel :execute)
+  (cl:defstruct (node (:predicate node?)
+                      (:constructor make-node (val left right)))
+    val left right))
 
 (cl:declaim (cl:inline make-foldl make-foldr
                        srfi-101::foldl/1 srfi-101::foldr/1
