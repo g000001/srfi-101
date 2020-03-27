@@ -1,4 +1,4 @@
-(cl:in-package :srfi-101.internal)
+(cl:in-package "https://github.com/g000001/srfi-101#internals")
 
 ;; SRFI 101: Purely Functional Random-Access Pairs and Lists
 ;; Copyright (c) David Van Horn 2009.  All Rights Reserved.
@@ -36,8 +36,7 @@
     val left right))
 
 (cl:declaim (cl:inline make-foldl make-foldr
-                       srfi-101::foldl/1 srfi-101::foldr/1
-                       car cdr null?))
+                       car cdr))
 
 ;; Nat -> Nat
 (define (sub1 n) (- n 1))
@@ -69,21 +68,21 @@
 ;; [X Y Z ... -> R] [List [Tree X] [Tree Y] [Tree Z] ...] -> [Tree R]
 (define (tree-map/n f ts)
   (let recr ((ts ts))
-       (if (and (pair? ts)
-                (node? (car ts)))
-           (make-node (apply f (map #'node-val ts))
-                      (recr (map #'node-left ts))
-                      (recr (map #'node-right ts)))
+       (if (and (rnrs:pair? ts)
+                (node? (rnrs:car ts)))
+           (make-node (apply f (rnrs:map #'node-val ts))
+                      (recr (rnrs:map #'node-left ts))
+                      (recr (rnrs:map #'node-right ts)))
            (apply f ts))))
   
 ;; [X Y Z ... -> R] [List [Tree X] [Tree Y] [Tree Z] ...] -> unspecified
 (define (tree-for-each/n f ts)
   (let recr ((ts ts))
-      (if (and (pair? ts)
-               (node? (car ts)))
-          (begin (apply f (map #'node-val ts))
-                 (recr (map #'node-left ts))
-                 (recr (map #'node-right ts)))
+      (if (and (rnrs:pair? ts)
+               (node? (rnrs:car ts)))
+          (begin (apply f (rnrs:map #'node-val ts))
+                 (recr (rnrs:map #'node-left ts))
+                 (recr (rnrs:map #'node-right ts)))
           (apply f ts))))
   
 ;; Nat [Nat -> X] -> [Tree X]
@@ -181,17 +180,17 @@
 ;; Random access lists
   
 ;; [RaListof X]
-(cl:defconstant srfi-101::null (quote ()))
+(cl:defconstant null (rnrs:quote ()))
 
 ;; [Any -> Boolean]
-(define srfi-101:pair? #'kons?)
+(define pair? #'kons?)
 
 ;; [Any -> Boolean]
-(define srfi-101:null? #'null?)
+(define null? #'rnrs:null?)
 
 ;; X [RaListof X] -> [RaListof X]  /\
 ;; X Y -> [RaPair X Y]
-(define (srfi-101:cons x ls)
+(define (cons x ls)
   (if (kons? ls)
       (let ((s (kons-size ls)))
         (if (and (kons? (kons-rest ls))
@@ -206,7 +205,7 @@
       (make-kons 1 x ls)))
 
 ;; [RaPair X Y] -> X Y
-(define srfi-101::car+cdr 
+(define car+cdr 
   (lambda (p)
     (cl:assert (kons? p))
     (if (node? (kons-tree p))
@@ -220,18 +219,18 @@
         (values (kons-tree p) (kons-rest p)))))
 
 ;; [RaPair X Y] -> X
-(define (srfi-101:car p)
-  (call-with-values (lambda () (srfi-101::car+cdr p))
+(define (car p)
+  (call-with-values (lambda () (car+cdr p))
                     (lambda (car cdr) (cl:declare (cl:ignore cdr)) car)))
 
 ;; [RaPair X Y] -> Y
-(define (srfi-101:cdr p)
-  (call-with-values (lambda () (srfi-101::car+cdr p))
+(define (cdr p)
+  (call-with-values (lambda () (car+cdr p))
                     (lambda (car cdr) (cl:declare (cl:ignore car)) cdr)))
 
 ;; [RaListof X] Nat [X -> X] -> X [RaListof X]
-(define (srfi-101:list-ref/update ls i f)
-                                        ;(assert (< i (srfi-101:length ls)))
+(define (list-ref/update ls i f)
+                                        ;(assert (< i (length ls)))
   (let recr ((xs ls) (j i))
     (if (< j (kons-size xs))
         (let-values (((v* t*) 
@@ -248,8 +247,8 @@
                                 r*))))))
 
 ;; [RaListof X] Nat [X -> X] -> [RaListof X]
-(define (srfi-101::list-update ls i f)
-  ;(assert (< i (srfi-101:length ls)))
+(define (list-update ls i f)
+  ;(assert (< i (length ls)))
   (let recr ((xs ls) (j i))
     (let ((s (kons-size xs)))
       (if (< j s) 
@@ -257,19 +256,19 @@
           (make-kons s (kons-tree xs) (recr (kons-rest xs) (- j s)))))))
 
 ;; [RaListof X] Nat X -> (values X [RaListof X])
-(define (srfi-101::list-ref/set ls i v)
-  (srfi-101:list-ref/update ls i (lambda (_) (cl:declare (cl:ignore _)) v)))
+(define (list-ref/set ls i v)
+  (list-ref/update ls i (lambda (_) (cl:declare (cl:ignore _)) v)))
 
 ;; X ... -> [RaListof X]
-(define (srfi-101:list . xs)
-  (srfi-1:fold-right #'srfi-101:cons srfi-101::null xs))
+(define (list . xs)
+  (srfi-1:fold-right #'cons null xs))
 
 ;; Nat X -> [RaListof X]
-(define srfi-101:make-list
+(define make-list
   (case-lambda
-   ((k) (srfi-101::make-list k 0))
+   ((k) (make-list k 0))
    ((k obj)
-    (let loop ((n k) (a srfi-101::null))
+    (let loop ((n k) (a null))
          (cond ((zero? n) a)
                (else 
                 (let ((t (largest-skew-binary n)))
@@ -293,45 +292,45 @@
 
 ;; [Any -> Boolean]
 ;; Is x a PROPER list?
-(define (srfi-101:list? x)
-  (or (srfi-101:null? x)
+(define (list? x)
+  (or (null? x)
       (and (kons? x)
-           (srfi-101:list? (kons-rest x)))))
+           (list? (kons-rest x)))))
 
-(define srfi-101:caar (lambda (ls) (srfi-101:car (srfi-101:car ls))))
-(define srfi-101:cadr (lambda (ls) (srfi-101:car (srfi-101:cdr ls))))
-(define srfi-101:cddr (lambda (ls) (srfi-101:cdr (srfi-101:cdr ls))))
-(define srfi-101:cdar (lambda (ls) (srfi-101:cdr (srfi-101:car ls))))
+(define caar (lambda (ls) (car (car ls))))
+(define cadr (lambda (ls) (car (cdr ls))))
+(define cddr (lambda (ls) (cdr (cdr ls))))
+(define cdar (lambda (ls) (cdr (car ls))))
 
-(define srfi-101:caaar (lambda (ls) (srfi-101:car (srfi-101:car (srfi-101:car ls)))))
-(define srfi-101:caadr (lambda (ls) (srfi-101:car (srfi-101:car (srfi-101:cdr ls)))))
-(define srfi-101:caddr (lambda (ls) (srfi-101:car (srfi-101:cdr (srfi-101:cdr ls)))))
-(define srfi-101:cadar (lambda (ls) (srfi-101:car (srfi-101:cdr (srfi-101:car ls)))))
-(define srfi-101:cdaar (lambda (ls) (srfi-101:cdr (srfi-101:car (srfi-101:car ls)))))
-(define srfi-101:cdadr (lambda (ls) (srfi-101:cdr (srfi-101:car (srfi-101:cdr ls)))))
-(define srfi-101:cdddr (lambda (ls) (srfi-101:cdr (srfi-101:cdr (srfi-101:cdr ls)))))
-(define srfi-101:cddar (lambda (ls) (srfi-101:cdr (srfi-101:cdr (srfi-101:car ls)))))
+(define caaar (lambda (ls) (car (car (car ls)))))
+(define caadr (lambda (ls) (car (car (cdr ls)))))
+(define caddr (lambda (ls) (car (cdr (cdr ls)))))
+(define cadar (lambda (ls) (car (cdr (car ls)))))
+(define cdaar (lambda (ls) (cdr (car (car ls)))))
+(define cdadr (lambda (ls) (cdr (car (cdr ls)))))
+(define cdddr (lambda (ls) (cdr (cdr (cdr ls)))))
+(define cddar (lambda (ls) (cdr (cdr (car ls)))))
 
-(define srfi-101:caaaar (lambda (ls) (srfi-101:car (srfi-101:car (srfi-101:car (srfi-101:car ls))))))
-(define srfi-101:caaadr (lambda (ls) (srfi-101:car (srfi-101:car (srfi-101:car (srfi-101:cdr ls))))))
-(define srfi-101:caaddr (lambda (ls) (srfi-101:car (srfi-101:car (srfi-101:cdr (srfi-101:cdr ls))))))
-(define srfi-101:caadar (lambda (ls) (srfi-101:car (srfi-101:car (srfi-101:cdr (srfi-101:car ls))))))
-(define srfi-101:cadaar (lambda (ls) (srfi-101:car (srfi-101:cdr (srfi-101:car (srfi-101:car ls))))))
-(define srfi-101:cadadr (lambda (ls) (srfi-101:car (srfi-101:cdr (srfi-101:car (srfi-101:cdr ls))))))
-(define srfi-101:cadddr (lambda (ls) (srfi-101:car (srfi-101:cdr (srfi-101:cdr (srfi-101:cdr ls))))))
-(define srfi-101:caddar (lambda (ls) (srfi-101:car (srfi-101:cdr (srfi-101:cdr (srfi-101:car ls))))))
-(define srfi-101:cdaaar (lambda (ls) (srfi-101:cdr (srfi-101:car (srfi-101:car (srfi-101:car ls))))))
-(define srfi-101:cdaadr (lambda (ls) (srfi-101:cdr (srfi-101:car (srfi-101:car (srfi-101:cdr ls))))))
-(define srfi-101:cdaddr (lambda (ls) (srfi-101:cdr (srfi-101:car (srfi-101:cdr (srfi-101:cdr ls))))))
-(define srfi-101:cdadar (lambda (ls) (srfi-101:cdr (srfi-101:car (srfi-101:cdr (srfi-101:car ls))))))
-(define srfi-101:cddaar (lambda (ls) (srfi-101:cdr (srfi-101:cdr (srfi-101:car (srfi-101:car ls))))))
-(define srfi-101:cddadr (lambda (ls) (srfi-101:cdr (srfi-101:cdr (srfi-101:car (srfi-101:cdr ls))))))
-(define srfi-101:cddddr (lambda (ls) (srfi-101:cdr (srfi-101:cdr (srfi-101:cdr (srfi-101:cdr ls))))))
-(define srfi-101:cdddar (lambda (ls) (srfi-101:cdr (srfi-101:cdr (srfi-101:cdr (srfi-101:car ls))))))
+(define caaaar (lambda (ls) (car (car (car (car ls))))))
+(define caaadr (lambda (ls) (car (car (car (cdr ls))))))
+(define caaddr (lambda (ls) (car (car (cdr (cdr ls))))))
+(define caadar (lambda (ls) (car (car (cdr (car ls))))))
+(define cadaar (lambda (ls) (car (cdr (car (car ls))))))
+(define cadadr (lambda (ls) (car (cdr (car (cdr ls))))))
+(define cadddr (lambda (ls) (car (cdr (cdr (cdr ls))))))
+(define caddar (lambda (ls) (car (cdr (cdr (car ls))))))
+(define cdaaar (lambda (ls) (cdr (car (car (car ls))))))
+(define cdaadr (lambda (ls) (cdr (car (car (cdr ls))))))
+(define cdaddr (lambda (ls) (cdr (car (cdr (cdr ls))))))
+(define cdadar (lambda (ls) (cdr (car (cdr (car ls))))))
+(define cddaar (lambda (ls) (cdr (cdr (car (car ls))))))
+(define cddadr (lambda (ls) (cdr (cdr (car (cdr ls))))))
+(define cddddr (lambda (ls) (cdr (cdr (cdr (cdr ls))))))
+(define cdddar (lambda (ls) (cdr (cdr (cdr (car ls))))))
 
 ;; [RaList X] -> Nat
-(define (srfi-101:length ls)
-  (cl:assert (srfi-101:list? ls))
+(define (length ls)
+  (cl:assert (list? ls))
   (let recr ((ls ls))
     (if (kons? ls)
         (+ (kons-size ls) (recr (kons-rest ls)))
@@ -359,61 +358,61 @@
     #'f))
 
 ;; [X Y -> Y] Y [RaListof X] -> Y
-(define srfi-101::foldl/1
-  (make-foldl #'srfi-101:null? #'srfi-101:car #'srfi-101:cdr))
+(define foldl/1
+  (make-foldl #'null? #'car #'cdr))
 
-(define srfi-101::foldr/1
-  (make-foldr #'srfi-101:null? #'srfi-101:car #'srfi-101:cdr))
+(define foldr/1
+  (make-foldr #'null? #'car #'cdr))
 
 ;; [RaListof X] ... -> [RaListof X]
-(define (srfi-101:append . lss)
-  (cond ((null? lss) srfi-101::null)
+(define (append . lss)
+  (cond ((rnrs:null? lss) null)
         (else (let recr ((lss lss))
-                (cond ((null? (cdr lss)) (car lss))
-                      (else (srfi-101::foldr/1 #'srfi-101:cons
-                                               (recr (cdr lss))
-                                               (car lss))))))))
+                (cond ((rnrs:null? (rnrs:cdr lss)) (rnrs:car lss))
+                      (else (foldr/1 #'cons
+                                               (recr (rnrs:cdr lss))
+                                               (rnrs:car lss))))))))
 
 ;; [RaListof X] -> [RaListof X]
-(define (srfi-101:reverse ls)
+(define (reverse ls)
   (cl:declare (cl:optimize (cl:debug 1)))  
-  (srfi-101::foldl/1 #'srfi-101:cons srfi-101::null ls)
-  #|(let ((empty? #'srfi-101:null?)
-        (first #'srfi-101:car)
-        (rest #'srfi-101:cdr))
+  (foldl/1 #'cons null ls)
+  #|(let ((empty? #'null?)
+        (first #'car)
+        (rest #'cdr))
     (cl:labels ((f (cons empty ls)
                   (if (funcall empty? ls) 
                       empty
                       (f cons
                         (funcall cons (funcall first ls) empty) 
                         (funcall rest ls)))))
-      (f #'srfi-101:cons srfi-101::null ls)))|#)
+      (f #'cons null ls)))|#)
 
 ;; [RaListof X] Nat -> [RaListof X]
-(define (srfi-101:list-tail ls i)
+(define (list-tail ls i)
   (let loop ((xs ls) (j i))
     (cond ((zero? j) xs)
-          (else (loop (srfi-101:cdr xs) (sub1 j))))))
+          (else (loop (cdr xs) (sub1 j))))))
 
 ;; [RaListof X] Nat -> X
 ;; Special-cased above to avoid logarathmic amount of cons'ing
 ;; and any multi-values overhead.  Operates in constant space.
-(define (srfi-101:list-ref ls i)
-  ;(assert (< i (srfi-101:length ls)))
+(define (list-ref ls i)
+  ;(assert (< i (length ls)))
   (let loop ((xs ls) (j i))
     (if (< j (kons-size xs))
         (tree-ref (kons-size xs) (kons-tree xs) j)
         (loop (kons-rest xs) (- j (kons-size xs))))))
 
 ;; [RaListof X] Nat X -> [RaListof X]
-(define (srfi-101:list-set ls i v)
-  (let-values (((_ l*) (srfi-101::list-ref/set ls i v)))
+(define (list-set ls i v)
+  (let-values (((_ l*) (list-ref/set ls i v)))
     _                                   ;dummy
     l*))
 
 ;; [X ... -> y] [RaListof X] ... -> [RaListof Y]
 ;; Takes advantage of the fact that map produces a list of equal size.
-(define srfi-101:map
+(define map
   (case-lambda 
    ((f ls)
     (let recr ((ls ls))
@@ -421,39 +420,39 @@
           (make-kons (kons-size ls) 
                      (tree-map f (kons-tree ls)) 
                      (recr (kons-rest ls)))
-          srfi-101::null)))
+          null)))
    ((f . lss)
-    ;(check-nary-loop-args 'srfi-101:map (lambda (x) x) f lss)
+    ;(check-nary-loop-args 'map (lambda (x) x) f lss)
     (let recr ((lss lss))
-      (cond ((srfi-101:null? (car lss)) srfi-101::null)
+      (cond ((null? (rnrs:car lss)) null)
             (else
              ;; IMPROVE ME: make one pass over lss.
-             (make-kons (kons-size (car lss))
-                        (tree-map/n f (map #'kons-tree lss))
-                        (recr (map #'kons-rest lss)))))))))
+             (make-kons (kons-size (rnrs:car lss))
+                        (tree-map/n f (rnrs:map #'kons-tree lss))
+                        (recr (rnrs:map #'kons-rest lss)))))))))
 
 
 ;; [X ... -> Y] [RaListof X] ... -> unspecified
-(define srfi-101:for-each
+(define for-each
   (case-lambda 
    ((f ls)
     (cl:when (kons? ls)
       (tree-for-each f (kons-tree ls))
-      (srfi-101:for-each f (kons-rest ls))))
+      (for-each f (kons-rest ls))))
    ((f . lss)
-    ;(check-nary-loop-args 'srfi-101:map (lambda (x) x) f lss)
+    ;(check-nary-loop-args 'map (lambda (x) x) f lss)
     (let recr ((lss lss))
-      (cl:when (srfi-101:pair? (car lss))
-        (tree-map/n f (map #'kons-tree lss))
-        (recr (map #'kons-rest lss)))))))
+      (cl:when (pair? (rnrs:car lss))
+        (tree-map/n f (rnrs:map #'kons-tree lss))
+        (recr (rnrs:map #'kons-rest lss)))))))
 
 ;; [RaListof X] -> [Listof X]
-(define (srfi-101:random-access-list->linear-access-list x)
-  (srfi-101::foldr/1 #'cons '() x))
+(define (random-access-list->linear-access-list x)
+  (foldr/1 #'rnrs:cons '() x))
 
 ;; [Listof X] -> [RaListof X]
-(define (srfi-101:linear-access-list->random-access-list x)
-  (srfi-1:fold-right #'srfi-101:cons '() x))
+(define (linear-access-list->random-access-list x)
+  (srfi-1:fold-right #'cons '() x))
 
 ;; This code based on code written by Abdulaziz Ghuloum
 ;; http://ikarus-scheme.org/pipermail/ikarus-users/2009-September/000595.html
@@ -462,11 +461,11 @@
     (lambda (x)
       (cl:labels ((f (x)
                     (cond
-                      ((pair? x) (srfi-101:cons (f (car x)) (f (cdr x))))
+                      ((rnrs:pair? x) (cons (f (rnrs:car x)) (f (rnrs:cdr x))))
                       ((vector? x) (cl:map 'cl:vector #'f x))
                       (else x))))
          (cond
-          ((not (or (pair? x) (vector? x))) x)
+          ((not (or (rnrs:pair? x) (vector? x))) x)
           ((cl:gethash x h))
           (else
            (let ((v (f x)))
@@ -474,9 +473,9 @@
              v)))))))
 
 
-(define-syntax srfi-101:quote
+(define-syntax quote
   (syntax-rules ()
-    ((srfi-101:quote datum) (get-cached 'datum)))) 
+    ((quote datum) (get-cached 'datum)))) 
 
 
 ;;; *EOF*

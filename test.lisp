@@ -1,6 +1,5 @@
-(cl:in-package :srfi-101.test)
-(def-suite srfi-101)
-(in-suite srfi-101)
+(cl:in-package "https://github.com/g000001/srfi-101#internals")
+(def-suite* srfi-101)
 
 ;; SRFI 101: Purely Functional Random-Access Pairs and Lists
 ;; Copyright (c) David Van Horn 2009.  All Rights Reserved.

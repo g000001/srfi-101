@@ -1,5 +1,6 @@
-* srfi 101: Purely Functional Random-Access Pairs and Lists
-- Copyright (C) David Van Horn 2009. All Rights Reserved.
+# SRFI 101 for CL: Purely Functional Random-Access Pairs and Lists
+
+* Copyright (C) David Van Horn 2009. All Rights Reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
